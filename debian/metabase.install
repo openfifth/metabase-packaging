@@ -1,0 +1,5 @@
+build/metabase.jar usr/local/metabase/
+build/VERSION.MF usr/local/metabase/
+packaging/apache2.conf.example usr/local/metabase/
+packaging/env.example usr/local/metabase/
+packaging/rsyslog.conf.example usr/local/metabase/

@@ -1,0 +1,99 @@
+name: Roll latest metabase.jar into a .deb with config templates/05 defaults/dynamic deps
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '17 */6 * * *'
+      timezone: Europe/London
+  workflow_dispatch:
+
+concurrency:
+  group: metabase-debian-packages
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: bare-metal
+
+    container:
+      image: node:20-bookworm
+
+    steps:
+      - name: Check out the tooling repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install packaging dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates \
+            curl \
+            debhelper \
+            dpkg-dev \
+            python3 \
+            unzip \
+            build-essential \
+            skopeo
+
+      - name: Fetch latest metabase.jar from maintainer and check its version tag
+        id: release
+        run: |
+          set -euo pipefail
+          source ./packaging.conf
+
+          mkdir -p download
+          version="$(./scripts/fetch-latest.sh download/metabase.jar)"
+
+          echo "version=$version" >> "$FORGEJO_OUTPUT"
+
+          if ./scripts/package-exists.sh "$version"; then
+            echo "build=false" >> "$FORGEJO_OUTPUT"
+            echo "metabase ${version} is already packaged in ${FORGEJO_SUITE}/${FORGEJO_COMPONENT}"
+          else
+            package_revision="$(date +%s)"
+            package_version="${version}-${package_revision}"
+
+            echo "package_revision=$package_revision" >> "$FORGEJO_OUTPUT"
+            echo "package_version=$package_version" >> "$FORGEJO_OUTPUT"
+            echo "build=true" >> "$FORGEJO_OUTPUT"
+            echo "metabase ${package_version} needs building"
+          fi
+
+      - name: Build package, choosing sensible dependencies based on version tag
+        if: steps.release.outputs.build == 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          PACKAGE_REVISION: ${{ steps.release.outputs.package_revision }}
+        run: |
+          ./scripts/build-package.sh "$VERSION" download/metabase.jar
+
+      - name: Check package for cromulence
+        if: steps.release.outputs.build == 'true'
+        env:
+          PACKAGE_VERSION: ${{ steps.release.outputs.package_version }}
+        run: |
+          ./scripts/inspect-package.sh \
+            "dist/metabase_${PACKAGE_VERSION}_all.deb" \
+            "$PACKAGE_VERSION"
+
+      - name: Publish package
+        if: steps.release.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+
+          deb="$(find dist -maxdepth 1 -name 'metabase_*_all.deb' -print -quit)"
+
+          test -n "$deb"
+          test -s "$deb"
+
+          curl \
+            --user-agent 'git' \
+            --fail-with-body \
+            --retry 3 \
+            --user "git:${{ secrets.PACKAGING_TOKEN }}" \
+            --upload-file "$deb" \
+            "https://git.openfifth.co.uk/api/packages/openfifth/debian/pool/Metabase/main/upload"

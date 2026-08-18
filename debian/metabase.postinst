@@ -1,0 +1,66 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+  configure)
+    if ! getent group metabase >/dev/null 2>&1; then
+      addgroup --system metabase >/dev/null
+    fi
+
+    if ! getent passwd metabase >/dev/null 2>&1; then
+      adduser \
+        --system \
+        --ingroup metabase \
+        --home /usr/local/metabase \
+        --no-create-home \
+        --shell /usr/sbin/nologin \
+        metabase >/dev/null
+    fi
+
+    # Preserve the old package's "install defaults only when absent" behaviour.
+    mkdir -p /etc/apache2/sites-available /etc/default /etc/rsyslog.d
+
+    if [ ! -e /etc/apache2/sites-available/metabase.conf ]; then
+      install -o root -g root -m 0640 \
+        /usr/local/metabase/apache2.conf.example \
+        /etc/apache2/sites-available/metabase.conf
+    fi
+
+    if [ ! -e /etc/default/metabase ]; then
+      install -o root -g root -m 0640 \
+        /usr/local/metabase/env.example \
+        /etc/default/metabase
+    fi
+
+    if [ ! -e /etc/rsyslog.d/metabase.conf ]; then
+      install -o root -g root -m 0644 \
+        /usr/local/metabase/rsyslog.conf.example \
+        /etc/rsyslog.d/metabase.conf
+    fi
+
+    if [ ! -e /var/log/metabase.log ]; then
+      touch /var/log/metabase.log
+    fi
+    if getent passwd syslog >/dev/null 2>&1 && getent group adm >/dev/null 2>&1; then
+      chown syslog:adm /var/log/metabase.log
+    fi
+    chmod 0640 /var/log/metabase.log
+
+    if command -v a2enmod >/dev/null 2>&1; then
+      a2enmod proxy proxy_html proxy_http >/dev/null || true
+    fi
+    if command -v a2ensite >/dev/null 2>&1; then
+      a2ensite metabase >/dev/null || true
+    fi
+
+    if command -v invoke-rc.d >/dev/null 2>&1; then
+      invoke-rc.d apache2 reload >/dev/null 2>&1 || true
+      invoke-rc.d rsyslog restart >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
+
+# debhelper inserts the systemd enable/start/restart lifecycle here.
+#DEBHELPER#
+
+exit 0

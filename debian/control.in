@@ -1,0 +1,16 @@
+Source: metabase
+Section: web
+Priority: optional
+Maintainer: Jake Bateman <jake.bateman@openfifth.co.uk>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: metabase
+Architecture: all
+Depends: ${misc:Depends}, @JAVA_DEPENDS@, mariadb-common, mariadb-server, apache2, rsyslog, adduser
+Description: Metabase open source analytics server
+ Metabase OSS packaged for Open Fifth deployments.
+ .
+ This package installs the official upstream Metabase JAR together with the
+ local Apache, rsyslog, environment and systemd integration used by Open Fifth.

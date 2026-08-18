@@ -1,0 +1,11 @@
+/build/
+/dist/
+/debian/control
+/debian/changelog
+/debian/.debhelper/
+/debian/debhelper-build-stamp
+/debian/files
+/debian/metabase/
+*.buildinfo
+*.changes
+*.deb

@@ -1,0 +1,21 @@
+# metabase https
+<VirtualHost *:80>
+	# default directory etc
+	DocumentRoot /var/www/html
+
+	# server name etc
+	# providing 127.0.1.1 will result in this rule being the fallback
+	# rule in the absence of any overrides further up the alphanumeribet
+	ServerName metabase.example.internal
+
+	# logs etc
+	CustomLog /var/log/apache2/metabase_access.log common
+	ErrorLog /var/log/apache2/metabase_error.log
+
+	# proxy etc
+	<Location />
+		ProxyPass http://localhost:3000/
+		ProxyPassReverse http://localhost:3000/
+	</Location>
+
+</VirtualHost>

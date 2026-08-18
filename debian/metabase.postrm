@@ -1,0 +1,30 @@
+#!/bin/sh
+set -e
+
+# debhelper handles the packaged systemd unit.
+#DEBHELPER#
+
+case "$1" in
+  remove|purge)
+    if command -v a2dissite >/dev/null 2>&1; then
+      a2dissite metabase >/dev/null 2>&1 || true
+    fi
+    if command -v invoke-rc.d >/dev/null 2>&1; then
+      invoke-rc.d apache2 reload >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
+
+if [ "$1" = "purge" ]; then
+  rm -f /etc/apache2/sites-available/metabase.conf
+  rm -f /etc/default/metabase
+  rm -f /etc/rsyslog.d/metabase.conf
+
+  if command -v invoke-rc.d >/dev/null 2>&1; then
+    invoke-rc.d rsyslog restart >/dev/null 2>&1 || true
+  fi
+
+  echo "W: Metabase package configuration was purged; the Metabase application database was not removed."
+fi
+
+exit 0
