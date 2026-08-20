@@ -1,3 +1,5 @@
+[![Tests passing!](https://forgejo.openfifth.co.uk/openfifth/metabase-packaging/badges/workflows/package.yml/badge.svg?branch=main)](https://forgejo.openfifth.co.uk/openfifth/metabase-packaging/actions)
+
 # Metabase Debian packages and associated defaults
 
 This repository rolls the official OSS version `metabase.jar` as a Debian
